@@ -4,7 +4,8 @@ import fs from "fs";
 // Initialize the S3 client
 // These variables must be provided in the .env file in production
 const getS3Client = () => {
-    if (!process.env.S3_BUCKET_NAME || !process.env.AWS_REGION || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+    const bucket = process.env.S3_BUCKET_NAME || process.env.AWS_S3_BUCKET_NAME;
+    if (!bucket || !process.env.AWS_REGION || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
         throw new Error("Missing AWS S3 credentials in environment variables.");
     }
     
@@ -27,7 +28,7 @@ const getS3Client = () => {
  */
 export const uploadFileToS3 = async (localFilePath, folderKey, mimeType, filename) => {
     const s3 = getS3Client();
-    const bucketName = process.env.S3_BUCKET_NAME;
+    const bucketName = process.env.S3_BUCKET_NAME || process.env.AWS_S3_BUCKET_NAME;
     const s3Key = `${folderKey}/${filename}`;
 
     const fileStream = fs.createReadStream(localFilePath);
