@@ -20,8 +20,9 @@ const Home = () => {
     const fetchCourses = async () => {
       try {
         const response = await API.get("/courses");
-        setAllCourses(response.data);
-        setLiveCourses(response.data.filter(c => c.liveSession?.isActive).slice(0, 3));
+        const courses = Array.isArray(response.data) ? response.data : [];
+        setAllCourses(courses);
+        setLiveCourses(courses.filter(c => c.liveSession?.isActive).slice(0, 3));
         
         if (isAuthenticated && user?.role === 'student') {
           const progressRes = await API.get("/progress/me/overview");

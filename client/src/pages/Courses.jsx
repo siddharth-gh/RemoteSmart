@@ -71,7 +71,7 @@ const Courses = () => {
             level: level !== "all" ? level : undefined,
           },
         });
-        setCourses(response.data);
+        setCourses(Array.isArray(response.data) ? response.data : []);
       } catch (err) {
         setError(err.response?.data?.message || t("courses.loadError"));
       } finally {

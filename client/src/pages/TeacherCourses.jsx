@@ -26,7 +26,7 @@ const TeacherCourses = () => {
     setLoading(true);
     try {
       const response = await API.get("/courses/teacher/my-courses");
-      setCourses(response.data);
+      setCourses(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load courses");
     } finally {
