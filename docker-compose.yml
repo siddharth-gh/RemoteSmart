@@ -1,34 +1,12 @@
 services:
-  mongodb:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-
   backend:
     build:
       context: ./server
       dockerfile: Dockerfile
     ports:
       - "5000:5000"
-    depends_on:
-      - mongodb
     env_file:
-      - ./server/.env
-    environment:
-      - MONGO_URI=mongodb://mongodb:27017/elearning
-      - ENABLE_WHISPER_TRANSCRIPTION=true
-      - WHISPER_API_URL=http://whisper-ai:8001/v1
-      - PORT=5000
-    restart: always
-
-  whisper-ai:
-    build:
-      context: ./server
-      dockerfile: Dockerfile.whisper
-    ports:
-      - "8001:8001"
+      - .env  # Changed to look in root by default
     restart: always
 
   frontend:
@@ -39,7 +17,6 @@ services:
       - "80:80"
     depends_on:
       - backend
+    env_file:
+      - .env
     restart: always
-
-volumes:
-  mongo-data:
