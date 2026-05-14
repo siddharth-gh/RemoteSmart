@@ -584,83 +584,83 @@ const LectureViewer = () => {
                              </div>
                            )}
                          </div>
-
-                         {/* Transcript / AI Summary Tab System */}
-                         <div className="max-w-4xl mx-auto w-full space-y-6">
-                            <div className="flex justify-center">
-                               <div className="inline-flex p-1 bg-surface-muted rounded-full border border-border shadow-inner">
-                                  <button 
-                                    onClick={() => {
-                                      if (mediaTab === 'summary') setShowTranscriptBelow(!showTranscriptBelow);
-                                      else { setMediaTab('summary'); setShowTranscriptBelow(true); }
-                                    }}
-                                    className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${showTranscriptBelow && mediaTab === 'summary' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-secondary hover:bg-surface'}`}
-                                  >
-                                    <span>✨ AI Summary</span>
-                                  </button>
-                                  {(isVideo || (resourceFiles && resourceFiles.length > 0)) && (
-                                     <button 
-                                       onClick={() => {
-                                         if (mediaTab === 'transcript') setShowTranscriptBelow(!showTranscriptBelow);
-                                         else { setMediaTab('transcript'); setShowTranscriptBelow(true); }
-                                       }}
-                                       className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${showTranscriptBelow && mediaTab === 'transcript' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-secondary hover:bg-surface'}`}
-                                     >
-                                       <span>📄 Transcript</span>
-                                     </button>
-                                  )}
-                               </div>
-                            </div>
-
-                            {showTranscriptBelow && (
-                              <div className="bg-surface border border-border rounded-[24px] p-6 lg:p-10 animate-in slide-in-from-top duration-500 shadow-xl relative overflow-hidden">
-                                 {mediaTab === 'summary' && <div className="absolute top-0 right-0 w-48 h-48 bg-accent/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-[80px]" />}
-                                 
-                                 <div className="flex items-center justify-between mb-8 pb-4 border-b border-border/50">
-                                    <span className="text-[10px] font-black text-secondary uppercase tracking-widest">
-                                      {mediaTab === 'transcript' ? 'Transcript' : 'AI Executive Insights'}
-                                    </span>
-                                    {mediaTab === 'summary' && lecture.aiSummary?.status === 'ready' && (
-                                      <span className="px-3 py-1 bg-accent/10 text-accent text-[9px] font-black rounded-full uppercase tracking-widest">Context Aware</span>
-                                    )}
-                                 </div>
-                                 
-                                 <div className="max-h-[400px] overflow-y-auto pr-6 no-scrollbar">
-                                    {mediaTab === 'transcript' ? (
-                                      <p className="text-base font-medium text-secondary leading-relaxed whitespace-pre-wrap">
-                                        {lecture.transcript?.text || (lecture.resources?.length > 0 ? lecture.resources[0].extractedText : "") || "No documentation or OCR text available for this specific media."}
-                                      </p>
-                                    ) : (
-                                      <div className="space-y-8">
-                                        <div className="space-y-4">
-                                           <p className="text-lg font-black text-primary leading-tight tracking-tight">Summary of Key Concepts</p>
-                                           <p className="text-base font-medium text-secondary leading-relaxed">
-                                             {lecture.aiSummary?.text || "Generating AI summary for this content..."}
-                                           </p>
-                                        </div>
-                                        {lecture.aiSummary?.keyPoints?.length > 0 && (
-                                          <div className="pt-6 border-t border-border/30">
-                                             <p className="text-[10px] font-black text-secondary uppercase tracking-widest mb-6">Critical Takeaways</p>
-                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                               {lecture.aiSummary.keyPoints.map((p, i) => (
-                                                 <div key={i} className="p-4 bg-surface-soft rounded-2xl border border-accent/5 flex items-start gap-3">
-                                                    <span className="text-accent font-black">#</span>
-                                                    <span className="text-[11px] font-bold text-secondary">{p}</span>
-                                                 </div>
-                                               ))}
-                                             </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                 </div>
-                              </div>
-                            )}
-                         </div>
-                      </div>
+                       </div>
                     );
                  })}
               </div>
+
+               {/* Transcript / AI Summary Tab System - always shown once, outside the media loop */}
+               <div className="max-w-4xl mx-auto w-full space-y-6 mb-16">
+                  <div className="flex justify-center">
+                     <div className="inline-flex p-1 bg-surface-muted rounded-full border border-border shadow-inner">
+                        <button 
+                          onClick={() => {
+                            if (mediaTab === 'summary') setShowTranscriptBelow(!showTranscriptBelow);
+                            else { setMediaTab('summary'); setShowTranscriptBelow(true); }
+                          }}
+                          className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${showTranscriptBelow && mediaTab === 'summary' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-secondary hover:bg-surface'}`}
+                        >
+                          <span>✨ AI Summary</span>
+                        </button>
+                        {(isVideo || lecture.transcript?.text || (resourceFiles && resourceFiles.length > 0)) && (
+                           <button 
+                             onClick={() => {
+                               if (mediaTab === 'transcript') setShowTranscriptBelow(!showTranscriptBelow);
+                               else { setMediaTab('transcript'); setShowTranscriptBelow(true); }
+                             }}
+                             className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${showTranscriptBelow && mediaTab === 'transcript' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-secondary hover:bg-surface'}`}
+                           >
+                             <span>📄 Transcript</span>
+                           </button>
+                        )}
+                     </div>
+                  </div>
+
+                  {showTranscriptBelow && (
+                    <div className="bg-surface border border-border rounded-[24px] p-6 lg:p-10 animate-in slide-in-from-top duration-500 shadow-xl relative overflow-hidden">
+                       {mediaTab === 'summary' && <div className="absolute top-0 right-0 w-48 h-48 bg-accent/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-[80px]" />}
+                       
+                       <div className="flex items-center justify-between mb-8 pb-4 border-b border-border/50">
+                          <span className="text-[10px] font-black text-secondary uppercase tracking-widest">
+                            {mediaTab === 'transcript' ? 'Transcript' : 'AI Executive Insights'}
+                          </span>
+                          {mediaTab === 'summary' && lecture.aiSummary?.status === 'ready' && (
+                            <span className="px-3 py-1 bg-accent/10 text-accent text-[9px] font-black rounded-full uppercase tracking-widest">Context Aware</span>
+                          )}
+                       </div>
+                       
+                       <div className="max-h-[400px] overflow-y-auto pr-6 no-scrollbar">
+                          {mediaTab === 'transcript' ? (
+                            <p className="text-base font-medium text-secondary leading-relaxed whitespace-pre-wrap">
+                              {lecture.transcript?.text || (lecture.resources?.length > 0 ? lecture.resources[0].extractedText : "") || "No documentation or OCR text available for this specific media."}
+                            </p>
+                          ) : (
+                            <div className="space-y-8">
+                              <div className="space-y-4">
+                                 <p className="text-lg font-black text-primary leading-tight tracking-tight">Summary of Key Concepts</p>
+                                 <p className="text-base font-medium text-secondary leading-relaxed">
+                                   {lecture.aiSummary?.text || (lecture.aiSummary?.status === 'processing' ? 'AI summary is being generated, check back shortly...' : 'No AI summary available yet.')}
+                                 </p>
+                              </div>
+                              {lecture.aiSummary?.keyPoints?.length > 0 && (
+                                <div className="pt-6 border-t border-border/30">
+                                   <p className="text-[10px] font-black text-secondary uppercase tracking-widest mb-6">Critical Takeaways</p>
+                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                     {lecture.aiSummary.keyPoints.map((p, i) => (
+                                       <div key={i} className="p-4 bg-surface-soft rounded-2xl border border-accent/5 flex items-start gap-3">
+                                          <span className="text-accent font-black">#</span>
+                                          <span className="text-[11px] font-bold text-secondary">{p}</span>
+                                       </div>
+                                     ))}
+                                   </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                       </div>
+                    </div>
+                  )}
+               </div>
 
               {resourceFiles.length > 0 && (
                 <div className="space-y-4 mb-16 max-w-4xl mx-auto w-full">

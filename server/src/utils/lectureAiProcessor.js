@@ -97,7 +97,7 @@ export const queueLectureAiProcessing = async (lectureId) => {
             return;
         }
 
-        console.log(`[AI Processor] Starting summary generation for lecture: ${lecture.title}`);
+        console.log(`[AI Processor] Starting summary generation for lecture: "${lecture.title}"`);
         const { summary, keyPoints } = await generateLectureSummary({
             courseTitle: course?.title || "Untitled course",
             moduleTitle: module?.title || "Untitled module",
@@ -106,7 +106,8 @@ export const queueLectureAiProcessing = async (lectureId) => {
             transcriptText,
         });
 
-        console.log(`[AI Processor] Summary generated. Now starting adaptive quiz bank generation...`);
+        console.log(`[AI Processor] Summary generated successfully for "${lecture.title}".`);
+        console.log(`[AI Processor] Now starting adaptive quiz bank generation for "${lecture.title}"...`);
 
         await Lecture.findByIdAndUpdate(lectureId, {
             $set: {
@@ -183,6 +184,8 @@ export const queueLectureAiProcessing = async (lectureId) => {
                 isPublished: true
             });
         }
+
+        console.log(`[AI Processor] Done.`);
     } catch (error) {
         await markLectureFailed(
             lectureId,

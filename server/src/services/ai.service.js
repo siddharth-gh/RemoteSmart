@@ -1,12 +1,13 @@
 import "../config/env.js";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 
 const DEFAULT_GOOGLE_AI_MODEL =
     process.env.GOOGLE_AI_MODEL ||
     process.env.GEMMA_MODEL ||
     process.env.AI_CHAT_MODEL ||
     process.env.GEMINI_MODEL ||
-    "gemma-3-27b-it";
+    "gemini-3.1-flash-lite";
 
 
 const normalizeGeminiError = (error) => {
@@ -31,37 +32,41 @@ const normalizeGeminiError = (error) => {
     throw error;
 };
 
-const getGeminiClient = () => {
-    if (!process.env.GEMINI_API_KEY) {
-        throw new Error("GEMINI_API_KEY is not configured");
+const getGeminiClient = (apiKey = process.env.GEMINI_API_KEY) => {
+    if (!apiKey) {
+        throw new Error("Gemini API key is not configured");
     }
-
-    if (typeof GoogleGenerativeAI !== 'function' && typeof GoogleGenerativeAI !== 'object') {
-        console.error("GoogleGenerativeAI is not properly imported. Check your @google/generative-ai package.");
-        throw new Error("AI SDK not found");
-    }
-
-    return new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    return new GoogleGenAI({ apiKey });
 };
+
+// Returns an OpenAI-compatible client pointed at local Ollama
+const getOllamaClient = () => {
+    return new OpenAI({
+        baseURL: (process.env.OLLAMA_URL || "http://localhost:11434") + "/v1",
+        apiKey: "ollama", // Ollama does not require a real key
+    });
+};
+
+const isOllamaConfigured = () => Boolean(process.env.OLLAMA_MODEL);
 
 const extractJson = (text) => {
     if (!text) return null;
-    
+
     let cleanText = text.trim();
-    
+
     try {
         // 1. Strip markdown code blocks
         cleanText = cleanText.replace(/```json\s?|```/g, "").trim();
-        
+
         // 2. Find the JSON object/array boundaries
         const firstBrace = cleanText.indexOf('{');
         const lastBrace = cleanText.lastIndexOf('}');
         const firstBracket = cleanText.indexOf('[');
         const lastBracket = cleanText.lastIndexOf(']');
-        
+
         let start = -1;
         let end = -1;
-        
+
         if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
             start = firstBrace;
             end = lastBrace;
@@ -69,11 +74,11 @@ const extractJson = (text) => {
             start = firstBracket;
             end = lastBracket;
         }
-        
+
         if (start !== -1 && end !== -1 && end > start) {
             cleanText = cleanText.substring(start, end + 1);
         }
-        
+
         // 3. Handle common JSON artifacts like trailing commas
         const sanitized = cleanText
             .replace(/,\s*([\]}])/g, '$1') // Trailing commas
@@ -91,43 +96,75 @@ const extractJson = (text) => {
     }
 };
 
-export const generateWithGemini = async (prompt, schema = null, options = {}) => {
-    try {
-        const client = getGeminiClient();
-        
-        // Priority: options.model > process.env.GEMINI_MODEL > default
-        const modelName = options.model || process.env.GEMINI_MODEL || "gemini-1.5-flash";
-        const model = client.getGenerativeModel({ model: modelName });
-        
-        // Detect if the model supports native JSON mode (Gemini 1.5+)
-        const isGemini15 = modelName.includes("gemini-1.5");
-        
-        let finalPrompt = prompt;
-        let generationConfig = options.temperature ? { temperature: options.temperature } : {};
+// Generate using local Ollama (OpenAI-compatible API)
+const generateWithOllama = async (prompt, schema = null, options = {}) => {
+    const client = getOllamaClient();
+    const modelName = process.env.OLLAMA_MODEL || "gemma3:4b";
 
-        if (isGemini15) {
-            // Use native SDK features for Gemini 1.5
-            generationConfig.responseMimeType = "application/json";
-            if (schema) {
-                generationConfig.responseSchema = schema;
-            }
-        } else if (schema) {
-            // For Gemma/others, inject schema into prompt and rely on manual extraction
-            finalPrompt += `\n\nIMPORTANT: Your response must be a single valid JSON object strictly following this schema:\n${JSON.stringify(schema, null, 2)}\n\nDo not include any conversational text or markdown backticks if possible, just the raw JSON.`;
+    let finalPrompt = prompt;
+    if (schema) {
+        finalPrompt += `\n\nIMPORTANT: Your response must be a single valid JSON object strictly following this schema:\n${JSON.stringify(schema, null, 2)}\n\nDo not include any conversational text or markdown backticks. Return raw JSON only.`;
+    }
+
+    console.log(`[AI Service] Calling local Ollama: ${modelName}`);
+
+    const completion = await client.chat.completions.create({
+        model: modelName,
+        messages: [{ role: "user", content: finalPrompt }],
+        temperature: options.temperature || 0.2,
+    });
+
+    const text = completion.choices[0]?.message?.content || "";
+    const result = extractJson(text);
+    console.log(`[AI Service] Done.`);
+    return result;
+};
+
+export const generateWithGemini = async (prompt, schema = null, options = {}) => {
+    // If Ollama is configured locally, use it instead of Google AI
+    if (isOllamaConfigured()) {
+        return generateWithOllama(prompt, schema, options);
+    }
+
+    try {
+        const ai = getGeminiClient(options.apiKey);
+
+        // Priority: options.model > process.env.GEMINI_MODEL > default
+        const modelName = options.model || process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
+        const keyUsed = options.keyName || "GEMINI_API_KEY";
+
+        console.log(`[AI Service] Calling Google Gemini: ${modelName} (using ${keyUsed})`);
+
+        // Detect if the model supports native JSON mode (all Gemini models do, Gemma does not)
+        const isGemini = modelName.includes("gemini");
+
+        let finalPrompt = prompt;
+        const config = {};
+
+        if (options.temperature) {
+            config.temperature = options.temperature;
         }
 
-        const contents = [{ role: 'user', parts: [{ text: finalPrompt }] }];
+        if (isGemini) {
+            // Use native JSON mode — guarantees clean JSON output without markdown wrappers
+            config.responseMimeType = "application/json";
+        } else if (schema) {
+            // For Gemma models, inject the schema into the prompt text instead
+            finalPrompt += `\n\nIMPORTANT: Your response must be a single valid JSON object strictly following this schema:\n${JSON.stringify(schema, null, 2)}\n\nDo not include any conversational text or markdown backticks. Return raw JSON only.`;
+        }
 
-        const result = await model.generateContent({ 
-            contents,
-            generationConfig
+        const response = await ai.models.generateContent({
+            model: modelName,
+            contents: finalPrompt,
+            config,
         });
-        
-        const response = await result.response;
-        const text = response.text();
-        
+
+        const text = response.text;
+
         // Use our robust extractor to handle the text output
-        return extractJson(text);
+        const result = extractJson(text);
+        console.log(`[AI Service] Done.`);
+        return result;
     } catch (error) {
         console.error("[AI Service] Gemini Error:", error);
         throw error;
@@ -182,15 +219,18 @@ Rules:
             },
         },
         required: ["summary", "keyPoints"],
+    }, {
+        apiKey: process.env.GEMINI_API_KEY_SUMMARY || process.env.GEMINI_API_KEY,
+        keyName: process.env.GEMINI_API_KEY_SUMMARY ? "GEMINI_API_KEY_SUMMARY" : "GEMINI_API_KEY",
     });
 
     return {
         summary: typeof parsed.summary === "string" ? parsed.summary.trim() : "",
         keyPoints: Array.isArray(parsed.keyPoints)
             ? parsed.keyPoints
-                  .map((item) => String(item || "").trim())
-                  .filter(Boolean)
-                  .slice(0, 6)
+                .map((item) => String(item || "").trim())
+                .filter(Boolean)
+                .slice(0, 6)
             : [],
     };
 };
@@ -277,6 +317,8 @@ Rules:
     }, {
         model: assistantModel,
         temperature: 0.2,
+        apiKey: process.env.GEMINI_API_KEY_CHAT || process.env.GEMINI_API_KEY,
+        keyName: process.env.GEMINI_API_KEY_CHAT ? "GEMINI_API_KEY_CHAT" : "GEMINI_API_KEY",
     });
 
     return {
@@ -286,22 +328,22 @@ Rules:
         reply: typeof parsed.reply === "string" ? parsed.reply.trim() : "",
         mcqs: Array.isArray(parsed.mcqs)
             ? parsed.mcqs
-                  .map((mcq) => ({
-                      question: String(mcq?.question || "").trim(),
-                      options: Array.isArray(mcq?.options)
-                          ? mcq.options
-                                .map((option) => String(option || "").trim())
-                                .filter(Boolean)
-                                .slice(0, 4)
-                          : [],
-                      correctAnswer:
-                          typeof mcq?.correctAnswer === "number"
-                              ? mcq.correctAnswer
-                              : 0,
-                      explanation: String(mcq?.explanation || "").trim(),
-                  }))
-                  .filter((mcq) => mcq.question && mcq.options.length >= 2)
-                  .slice(0, 4)
+                .map((mcq) => ({
+                    question: String(mcq?.question || "").trim(),
+                    options: Array.isArray(mcq?.options)
+                        ? mcq.options
+                            .map((option) => String(option || "").trim())
+                            .filter(Boolean)
+                            .slice(0, 4)
+                        : [],
+                    correctAnswer:
+                        typeof mcq?.correctAnswer === "number"
+                            ? mcq.correctAnswer
+                            : 0,
+                    explanation: String(mcq?.explanation || "").trim(),
+                }))
+                .filter((mcq) => mcq.question && mcq.options.length >= 2)
+                .slice(0, 4)
             : [],
     };
 };
@@ -315,6 +357,7 @@ export const generateAdaptiveQuestionBank = async ({
     difficulty = "medium",
     count = 5,
 }) => {
+    console.log(`[AI Service] Generating ${difficulty} question bank (${count} questions)...`);
     const parsed = await generateJson(`You are an adaptive educational assessment assistant.
     
 Course: ${courseTitle}
@@ -385,48 +428,51 @@ Rules:
             },
         },
         required: ["questions"],
+    }, {
+        apiKey: process.env.GEMINI_API_KEY_QUIZ || process.env.GEMINI_API_KEY,
+        keyName: process.env.GEMINI_API_KEY_QUIZ ? "GEMINI_API_KEY_QUIZ" : "GEMINI_API_KEY",
     });
 
     const difficulties = ["easy", "medium", "hard"];
     const normalized = Array.isArray(parsed.questions)
         ? parsed.questions
-              .map((question) => ({
-                  question: String(question?.question || "").trim(),
-                  options: Array.isArray(question?.options)
-                      ? question.options
-                            .map((option) => String(option || "").trim())
-                            .filter(Boolean)
-                            .slice(0, 4)
-                      : [],
-                  correctAnswer:
-                      typeof question?.correctAnswer === "number"
-                          ? Math.max(0, Math.min(3, Math.trunc(question.correctAnswer)))
-                          : 0,
-                  explanation: String(question?.explanation || "").trim(),
-                  difficulty: difficulties.includes(
-                      String(question?.difficulty || "").toLowerCase()
-                  )
-                      ? String(question.difficulty).toLowerCase()
-                      : difficulty,
-                  concept:
-                      String(question?.concept || "").trim() || "Core concept",
-                  learningObjective: String(
-                      question?.learningObjective || ""
-                  ).trim(),
-              }))
-              .filter(
-                  (question) =>
-                      question.question &&
-                      question.options.length === 4 &&
-                      question.options.every(
-                          (option) =>
-                              option.length > 1 &&
-                              !/^[abcd]$/i.test(option) &&
-                              !/^option\s*\d+$/i.test(option) &&
-                              !/^choice\s*\d+$/i.test(option)
-                      )
-              )
-              .slice(0, count)
+            .map((question) => ({
+                question: String(question?.question || "").trim(),
+                options: Array.isArray(question?.options)
+                    ? question.options
+                        .map((option) => String(option || "").trim())
+                        .filter(Boolean)
+                        .slice(0, 4)
+                    : [],
+                correctAnswer:
+                    typeof question?.correctAnswer === "number"
+                        ? Math.max(0, Math.min(3, Math.trunc(question.correctAnswer)))
+                        : 0,
+                explanation: String(question?.explanation || "").trim(),
+                difficulty: difficulties.includes(
+                    String(question?.difficulty || "").toLowerCase()
+                )
+                    ? String(question.difficulty).toLowerCase()
+                    : difficulty,
+                concept:
+                    String(question?.concept || "").trim() || "Core concept",
+                learningObjective: String(
+                    question?.learningObjective || ""
+                ).trim(),
+            }))
+            .filter(
+                (question) =>
+                    question.question &&
+                    question.options.length === 4 &&
+                    question.options.every(
+                        (option) =>
+                            option.length > 1 &&
+                            !/^[abcd]$/i.test(option) &&
+                            !/^option\s*\d+$/i.test(option) &&
+                            !/^choice\s*\d+$/i.test(option)
+                    )
+            )
+            .slice(0, count)
         : [];
 
     if (normalized.length === 0) {
