@@ -30,7 +30,7 @@ const AdminDashboard = () => {
         const data = await fetchAdminData();
         if (!isActive) return;
         setAnalytics(data.analytics);
-        setUsers(data.users);
+        setUsers(Array.isArray(data.users) ? data.users : []);
       } catch (err) {
         if (isActive) setError(err.response?.data?.message || "Failed to load admin data");
       }
