@@ -13,7 +13,7 @@ const TeacherStudents = () => {
     const fetchStudents = async () => {
       try {
         const response = await API.get("/analytics/teacher/students");
-        setCourseGroups(response.data);
+        setCourseGroups(Array.isArray(response.data) ? response.data : []);
       } catch (err) {
         setError("Failed to load student directory");
       } finally {
