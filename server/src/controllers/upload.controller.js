@@ -100,15 +100,14 @@ export const uploadResource = asyncHandler(async (req, res) => {
     const s3Url = await uploadFileToS3(saved.absolutePath, "resources", mimeType, saved.filename);
     await fs.unlink(saved.absolutePath).catch(err => console.error("Failed to delete local resource:", err));
 
-    // Create a job for tracking background extraction/AI
     const resourceType = isPdf
         ? "pdf"
-        : (mimeType.includes("powerpoint") || 
-           mimeType.includes("presentation") || 
-           mimeType.includes("officedocument.presentationml"))
+        : (mimeType.includes("powerpoint") ||
+            mimeType.includes("presentation") ||
+            mimeType.includes("officedocument.presentationml"))
             ? (originalFilename.toLowerCase().endsWith('.pptx') ? "pptx" : "ppt")
-            : (mimeType.includes("word") || 
-               mimeType.includes("officedocument.wordprocessingml"))
+            : (mimeType.includes("word") ||
+                mimeType.includes("officedocument.wordprocessingml"))
                 ? (originalFilename.toLowerCase().endsWith('.docx') ? "docx" : "doc")
                 : mimeType === "text/plain"
                     ? "text"
@@ -130,7 +129,6 @@ export const uploadResource = asyncHandler(async (req, res) => {
     (async () => {
         console.log(`[Upload] Background processing started for jobId: ${job.jobId}`);
         try {
-            // Step 3: Text Extraction (Transcript for PDF/PPTX)
             let extractedText = "";
             try {
                 console.log(`[Upload] Starting extraction for ${originalFilename}...`);
@@ -171,37 +169,37 @@ export const uploadResource = asyncHandler(async (req, res) => {
                 },
             });
 
-                console.log(`[Upload] Searching for lecture with jobId: ${job.jobId} to update transcript...`);
-                Lecture.findOneAndUpdate(
-                    { videoJobId: job.jobId },
-                    { 
-                        $set: { 
-                            "transcript.status": "ready",
-                            "transcript.text": extractedText,
-                            "transcript.source": isPdf ? "pdf-parser" : "office-parser",
-                            "transcript.error": "",
-                            "resources.$[elem].extractedText": extractedText,
-                            "resources.$[elem].isOptimized": optimized.optimized
-                        } 
-                    },
-                    { 
-                        arrayFilters: [{ "elem.originalFilename": originalFilename }],
-                        returnDocument: "after"
+            console.log(`[Upload] Searching for lecture with jobId: ${job.jobId} to update transcript...`);
+            Lecture.findOneAndUpdate(
+                { videoJobId: job.jobId },
+                {
+                    $set: {
+                        "transcript.status": "ready",
+                        "transcript.text": extractedText,
+                        "transcript.source": isPdf ? "pdf-parser" : "office-parser",
+                        "transcript.error": "",
+                        "resources.$[elem].extractedText": extractedText,
+                        "resources.$[elem].isOptimized": optimized.optimized
                     }
-                ).then(lecture => {
-                    if (lecture) {
-                        console.log(`[Upload] SUCCESS: Updated lecture ${lecture._id} (${lecture.title}) with transcript. Triggering AI...`);
-                        import("../utils/lectureAiProcessor.js").then(({ queueLectureAiProcessing }) => {
-                            queueLectureAiProcessing(lecture._id).catch(err => {
-                                console.error("[Upload] AI Queueing failed for lecture:", lecture._id, err.message);
-                            });
+                },
+                {
+                    arrayFilters: [{ "elem.originalFilename": originalFilename }],
+                    returnDocument: "after"
+                }
+            ).then(lecture => {
+                if (lecture) {
+                    console.log(`[Upload] SUCCESS: Updated lecture ${lecture._id} (${lecture.title}) with transcript. Triggering AI...`);
+                    import("../utils/lectureAiProcessor.js").then(({ queueLectureAiProcessing }) => {
+                        queueLectureAiProcessing(lecture._id).catch(err => {
+                            console.error("[Upload] AI Queueing failed for lecture:", lecture._id, err.message);
                         });
-                    } else {
-                        console.warn(`[Upload] WARNING: No lecture found with jobId ${job.jobId} yet. AI will trigger when teacher saves the lecture.`);
-                    }
-                }).catch(err => {
-                    console.error("[Upload] ERROR: Background update failed:", err.message);
-                });
+                    });
+                } else {
+                    console.warn(`[Upload] WARNING: No lecture found with jobId ${job.jobId} yet. AI will trigger when teacher saves the lecture.`);
+                }
+            }).catch(err => {
+                console.error("[Upload] ERROR: Background update failed:", err.message);
+            });
         } catch (error) {
             console.error("Resource background processing failed:", error);
             updateVideoJob(job.jobId, {
@@ -229,17 +227,17 @@ export const uploadVideo = asyncHandler(async (req, res) => {
     const originalExtension = extensionFromName(req.file.originalname, ".mp4");
     const savedOriginal = req.file.path
         ? await moveLocalUpload({
-              sourcePath: req.file.path,
-              folderKey: "videosOriginal",
-              originalFilename: req.file.originalname,
-              extension: originalExtension,
-          })
+            sourcePath: req.file.path,
+            folderKey: "videosOriginal",
+            originalFilename: req.file.originalname,
+            extension: originalExtension,
+        })
         : await writeLocalUpload({
-              buffer: req.file.buffer,
-              folderKey: "videosOriginal",
-              originalFilename: req.file.originalname,
-              extension: originalExtension,
-          });
+            buffer: req.file.buffer,
+            folderKey: "videosOriginal",
+            originalFilename: req.file.originalname,
+            extension: originalExtension,
+        });
 
     pruneExpiredVideoJobs();
 
@@ -348,10 +346,10 @@ export const uploadVideo = asyncHandler(async (req, res) => {
 
                 // Cleanup all local files after successful upload
                 await Promise.all([
-                    fs.unlink(savedOriginal.absolutePath).catch(() => {}),
-                    fs.unlink(optimizedVideo.optimizedPath).catch(() => {}),
-                    fs.unlink(optimizedVideo.audioPath).catch(() => {}),
-                    fs.unlink(optimizedVideo.thumbnailPath).catch(() => {})
+                    fs.unlink(savedOriginal.absolutePath).catch(() => { }),
+                    fs.unlink(optimizedVideo.optimizedPath).catch(() => { }),
+                    fs.unlink(optimizedVideo.audioPath).catch(() => { }),
+                    fs.unlink(optimizedVideo.thumbnailPath).catch(() => { })
                 ]);
             } catch (error) {
                 console.error("Failed to upload videos to S3:", error);
@@ -364,7 +362,7 @@ export const uploadVideo = asyncHandler(async (req, res) => {
                 message: "Video processing finished. Ready to attach.",
                 stage: "complete",
                 result: {
-                    url: originalS3Url, 
+                    url: originalS3Url,
                     originalUrl: originalS3Url,
                     optimizedUrl: optimizedS3Url,
                     audioOnlyUrl: audioS3Url,
@@ -382,10 +380,7 @@ export const uploadVideo = asyncHandler(async (req, res) => {
                 },
             });
 
-            // We KEEP local files in this mode because they ARE the storage
-            // In S3 mode we would unlink them.
-            
-            // Background apply to Lecture if it exists
+
             import("../models/lecture.model.js").then(({ default: Lecture }) => {
                 Lecture.findOne({ videoJobId: job.jobId }).then(lecture => {
                     if (lecture) {
