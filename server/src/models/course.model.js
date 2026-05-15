@@ -7,6 +7,10 @@ const courseSchema = new mongoose.Schema(
             required: true,
             trim: true,
         },
+        thumbnail: {
+            type: String,
+            default: "",
+        },
 
         description: {
             type: String,

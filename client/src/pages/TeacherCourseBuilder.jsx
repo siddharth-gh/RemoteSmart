@@ -117,12 +117,15 @@ const TeacherCourseBuilder = () => {
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [courseThumbnail, setCourseThumbnail] = useState("");
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const [pollIntervalId, setPollIntervalId] = useState(null);
 
   const fetchCourseData = useCallback(async () => {
     try {
       const res = await API.get(`/courses/${courseId}`);
       setCourse(res.data);
+      setCourseThumbnail(res.data.thumbnail || "");
       const modRes = await API.get(`/modules/${courseId}`);
       const sortedModules = modRes.data.sort((a, b) => a.order - b.order);
       setModules(sortedModules);
@@ -317,6 +320,46 @@ const TeacherCourseBuilder = () => {
       setError("Upload failed");
       setUploadStatus("Error");
       return null;
+    }
+  };
+
+  const uploadCourseThumbnail = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    setThumbnailUploading(true);
+    
+    try {
+      const res = await API.post("/uploads/image", formData);
+      setCourseThumbnail(res.data.url);
+      setStatusMessage("Thumbnail uploaded! Click Save Changes to finish.");
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (err) {
+      setError("Thumbnail upload failed");
+    } finally {
+      setThumbnailUploading(false);
+    }
+  };
+
+  const handleUpdateCourse = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const data = {
+      title: form.title.value,
+      description: form.description.value,
+      category: form.category.value,
+      thumbnail: courseThumbnail
+    };
+
+    setIsSubmitting(true);
+    try {
+      await API.put(`/courses/${courseId}`, data);
+      setCourse(prev => ({ ...prev, ...data }));
+      setStatusMessage("Course updated successfully!");
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (err) {
+      setError("Failed to update course");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -758,25 +801,67 @@ const TeacherCourseBuilder = () => {
                    <h2 className="text-4xl font-black text-primary mb-2">Course Core</h2>
                    <p className="text-secondary">Update your course identity and visibility settings.</p>
                 </header>
-                <div className="bg-surface p-12 rounded-[3rem] border border-border shadow-sm space-y-8">
-                   <div className="grid grid-cols-2 gap-8">
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Display Title</label>
-                         <input className="w-full px-6 py-4 rounded-2xl bg-surface-soft border-none font-bold" defaultValue={course?.title} />
-                      </div>
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Category</label>
-                         <select className="w-full px-6 py-4 rounded-2xl bg-surface-soft border-none font-bold outline-none appearance-none">
-                            <option>{course?.category || 'General'}</option>
-                         </select>
-                      </div>
-                   </div>
-                   <div className="space-y-2">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Short Description</label>
-                      <textarea rows={4} className="w-full px-6 py-4 rounded-2xl bg-surface-soft border-none font-bold resize-none" defaultValue={course?.description} />
-                   </div>
-                   <button className="px-10 py-5 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-600/20">Save Changes</button>
-                </div>
+                <form onSubmit={handleUpdateCourse} className="bg-surface p-12 rounded-[3rem] border border-border shadow-sm space-y-8">
+                    {/* Thumbnail Section */}
+                    <div className="space-y-4">
+                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Course Cover Image</label>
+                       <div className="flex items-start gap-8">
+                          <div className="w-48 aspect-video rounded-2xl overflow-hidden bg-surface-soft border border-border flex items-center justify-center relative group">
+                             {courseThumbnail ? (
+                                <img src={courseThumbnail} alt="Preview" className="w-full h-full object-cover" />
+                             ) : (
+                                <span className="text-2xl">🖼️</span>
+                             )}
+                             {thumbnailUploading && (
+                                <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                                   <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                                </div>
+                             )}
+                          </div>
+                          <div className="flex-1 space-y-4">
+                             <p className="text-xs text-secondary leading-relaxed">Choose a high-resolution image to represent your course. Recommended size: 1280x720px.</p>
+                             <input 
+                                type="file" 
+                                id="thumbnail-upload" 
+                                className="hidden" 
+                                accept="image/*" 
+                                onChange={(e) => e.target.files[0] && uploadCourseThumbnail(e.target.files[0])} 
+                             />
+                             <button 
+                                type="button"
+                                onClick={() => document.getElementById('thumbnail-upload').click()}
+                                className="px-6 py-3 bg-surface-soft border border-border text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-border transition-all"
+                             >
+                                {courseThumbnail ? "Change Image" : "Upload Image"}
+                             </button>
+                          </div>
+                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-8">
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Display Title</label>
+                          <input name="title" className="w-full px-6 py-4 rounded-2xl bg-surface-soft border-none font-bold" defaultValue={course?.title} />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Category</label>
+                          <select name="category" className="w-full px-6 py-4 rounded-2xl bg-surface-soft border-none font-bold outline-none appearance-none">
+                             <option value="General">General</option>
+                             <option value="Development">Development</option>
+                             <option value="Design">Design</option>
+                             <option value="Business">Business</option>
+                             <option value="Academics">Academics</option>
+                          </select>
+                       </div>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Short Description</label>
+                       <textarea name="description" rows={4} className="w-full px-6 py-4 rounded-2xl bg-surface-soft border-none font-bold resize-none" defaultValue={course?.description} />
+                    </div>
+                    <button type="submit" disabled={isSubmitting} className="px-10 py-5 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-600/20">
+                       {isSubmitting ? "Saving..." : "Save Changes"}
+                    </button>
+                 </form>
              </div>
           )}
 

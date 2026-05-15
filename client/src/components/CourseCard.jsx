@@ -1,5 +1,5 @@
 const CourseCard = ({ course, onClick }) => {
-  const { title, description, teacherId, category, level, downloaded, averageRating } = course || {};
+  const { title, description, teacherId, category, level, downloaded, averageRating, thumbnail } = course || {};
   const teacherName = teacherId?.name || "Instructor";
 
   return (
@@ -8,6 +8,22 @@ const CourseCard = ({ course, onClick }) => {
       onClick={onClick}
     >
       <div className="relative z-10 flex flex-col h-full space-y-4">
+        
+        {/* Course Image */}
+        <div className="aspect-[16/9] w-full rounded-2xl overflow-hidden bg-surface-soft border border-border relative mb-2">
+          {thumbnail ? (
+            <img 
+              src={thumbnail} 
+              alt={title} 
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-blue-600/20 to-purple-600/20 flex items-center justify-center">
+              <span className="text-4xl">📚</span>
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        </div>
         
         {/* Header: Badges */}
         <div className="flex justify-between items-start">

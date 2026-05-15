@@ -30,6 +30,7 @@ export const createCourse = asyncHandler(async (req, res) => {
         description,
         category,
         level,
+        thumbnail: req.body.thumbnail || "",
         teacherId: req.user._id,
     });
 
@@ -95,7 +96,7 @@ export const getCourseById = asyncHandler(async (req, res) => {
 // @desc Update Course
 // @route PUT /api/courses/:id
 export const updateCourse = asyncHandler(async (req, res) => {
-    const { title, description, category, level } = req.body;
+    const { title, description, category, level, thumbnail } = req.body;
 
     const course = await Course.findById(req.params.id);
 
@@ -116,6 +117,7 @@ export const updateCourse = asyncHandler(async (req, res) => {
     if (description) course.description = description;
     if (category) course.category = category;
     if (level) course.level = level;
+    if (thumbnail !== undefined) course.thumbnail = thumbnail;
 
     await course.save();
 
