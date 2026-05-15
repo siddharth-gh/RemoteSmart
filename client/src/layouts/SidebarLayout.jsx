@@ -65,9 +65,14 @@ const SidebarLayout = ({ children }) => {
           {/* Navigation */}
           <nav className="flex-1 flex flex-col gap-2">
             {navItems.map((item) => {
-              const isActive = item.path === "/teacher/dashboard" 
-                ? location.pathname === item.path 
-                : location.pathname.startsWith(item.path);
+              const itemBaseUrl = item.path.split('?')[0];
+              const itemSearchParams = new URLSearchParams(item.path.split('?')[1] || "");
+              const currentSearchParams = new URLSearchParams(location.search);
+              
+              const isPathActive = location.pathname === itemBaseUrl;
+              const isViewActive = !itemSearchParams.get("view") || itemSearchParams.get("view") === currentSearchParams.get("view");
+              
+              const isActive = isPathActive && isViewActive;
                 
               return (
                 <Link
