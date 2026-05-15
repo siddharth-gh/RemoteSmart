@@ -29,7 +29,7 @@ const cacheAsset = async (cache, url) => {
       return true;
     }
   } catch {
-    // ignore asset failures for offline pack
+    // todo
   }
   return false;
 };

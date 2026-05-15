@@ -170,9 +170,9 @@ const UnifiedPlayer = ({ item }) => {
                 onChange={(e) => handleModeChange(e.target.value)}
               >
                 <option value="auto">{t("lectureViewer.autoSelect")}</option>
-                <option value="original">High ({formatVideoSize(item.originalBytes || item.bytes)})</option>
-                {optimizedReady && <option value="optimized">Compressed ({formatVideoSize(item.optimizedBytes)})</option>}
-                {audioReady && <option value="audio">Audio Only ({formatVideoSize(item.audioOnlyBytes)})</option>}
+                <option value="original">High ({formatVideoSize(item.originalSize || item.bytes)})</option>
+                {optimizedReady && <option value="optimized">Compressed ({formatVideoSize(item.optimizedSize)})</option>}
+                {audioReady && <option value="audio">Audio Only ({formatVideoSize(item.audioOnlySize)})</option>}
               </select>
             </div>
 

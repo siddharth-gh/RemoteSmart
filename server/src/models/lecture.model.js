@@ -16,6 +16,12 @@ const contentSchema = new mongoose.Schema(
             type: String, // for image URL
         },
 
+        originalUrl: {
+            type: String, // for high-quality video URL
+            trim: true,
+            default: "",
+        },
+
         originalSize: {
             type: Number,
             default: 0,

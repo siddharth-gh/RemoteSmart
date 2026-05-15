@@ -370,9 +370,9 @@ export const uploadVideo = asyncHandler(async (req, res) => {
                     audioOnlyUrl: audioS3Url,
                     thumbnailUrl: thumbnailS3Url,
                     bytes: req.file.size,
-                    originalBytes: req.file.size,
-                    optimizedBytes: optimizedVideo.optimizedBytes,
-                    audioOnlyBytes: optimizedVideo.audioBytes,
+                    originalSize: req.file.size,
+                    optimizedSize: optimizedVideo.optimizedBytes,
+                    audioOnlySize: optimizedVideo.audioBytes,
                     originalFilename: req.file.originalname,
                     mimeType: req.file.mimetype,
                     duration: 0,
@@ -396,9 +396,9 @@ export const uploadVideo = asyncHandler(async (req, res) => {
                             lecture.contents[videoIndex].optimizedUrl = optimizedS3Url;
                             lecture.contents[videoIndex].audioOnlyUrl = audioS3Url;
                             lecture.contents[videoIndex].thumbnailUrl = thumbnailS3Url;
-                            lecture.contents[videoIndex].originalBytes = req.file.size;
-                            lecture.contents[videoIndex].optimizedBytes = optimizedVideo.optimizedBytes;
-                            lecture.contents[videoIndex].audioOnlyBytes = optimizedVideo.audioBytes;
+                            lecture.contents[videoIndex].originalSize = req.file.size;
+                            lecture.contents[videoIndex].optimizedSize = optimizedVideo.optimizedBytes;
+                            lecture.contents[videoIndex].audioOnlySize = optimizedVideo.audioBytes;
                             lecture.contents[videoIndex].duration = 0;
                             lecture.contents[videoIndex].isOptimized = true;
                         }
