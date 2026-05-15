@@ -39,11 +39,10 @@ const getGeminiClient = (apiKey = process.env.GEMINI_API_KEY) => {
     return new GoogleGenAI({ apiKey });
 };
 
-// Returns an OpenAI-compatible client pointed at local Ollama
 const getOllamaClient = () => {
     return new OpenAI({
         baseURL: (process.env.OLLAMA_URL || "http://localhost:11434") + "/v1",
-        apiKey: "ollama", // Ollama does not require a real key
+        apiKey: "ollama",
     });
 };
 

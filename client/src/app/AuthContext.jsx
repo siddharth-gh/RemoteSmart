@@ -80,7 +80,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     if (role === "admin") {
-      return "/admin/dashboard";
+      return "/admin";
     }
 
     return "/dashboard";
