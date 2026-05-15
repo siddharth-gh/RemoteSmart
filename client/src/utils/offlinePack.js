@@ -14,10 +14,6 @@ const normalizeResourceType = (resource) => {
     return "pdf";
   }
 
-  if (value.includes(".ppt") || value.includes(".pptx")) {
-    return "ppt";
-  }
-
   if (value.includes(".txt") || value.includes("text/plain")) {
     return "text";
   }
@@ -89,7 +85,7 @@ export const downloadCoursePack = async (courseId) => {
 
       lecture.resources?.forEach((resource) => {
         const type = normalizeResourceType(resource);
-        if ((type === "pdf" || type === "text" || type === "ppt") && resource.url) {
+        if ((type === "pdf" || type === "text") && resource.url) {
           assetUrls.push(resource.url);
         }
       });
