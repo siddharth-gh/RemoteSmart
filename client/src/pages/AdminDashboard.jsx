@@ -1,62 +1,68 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import API from "../api/api";
 import { useAuth } from "../app/useAuth";
 import SidebarLayout from "../layouts/SidebarLayout";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const activeTab = queryParams.get("view") || "overview";
+
   const [analytics, setAnalytics] = useState(null);
   const [users, setUsers] = useState([]);
   const [courses, setCourses] = useState([]);
-  const [activeTab, setActiveTab] = useState("overview"); // overview, teachers, students, courses
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  
-  const maxRoleValue = Math.max(...(analytics?.roleDistribution?.map((item) => item.value) ?? [0]), 1);
-  const maxEnrollmentValue = Math.max(...(analytics?.enrollmentBreakdown?.map((item) => item.value) ?? [0]), 1);
 
-  const fetchAdminData = async () => {
-    const [analyticsResponse, usersResponse, coursesResponse] = await Promise.all([
-      API.get("/analytics/admin/overview"),
-      API.get("/users"),
-      API.get("/courses"),
-    ]);
-    return {
-      analytics: analyticsResponse.data,
-      users: usersResponse.data,
-      courses: coursesResponse.data,
-    };
-  };
-
-  useEffect(() => {
-    let isActive = true;
-    const loadAdminData = async () => {
-      try {
-        const data = await fetchAdminData();
-        if (!isActive) return;
-        setAnalytics(data.analytics);
-        setUsers(Array.isArray(data.users) ? data.users : []);
-        setCourses(Array.isArray(data.courses) ? data.courses : []);
-      } catch (err) {
-        if (isActive) setError(err.response?.data?.message || "Failed to load admin data");
-      }
-    };
-    loadAdminData();
-    return () => { isActive = false; };
-  }, []);
-
-  const updateRole = async (userId, role) => {
+  const fetchOverviewData = async () => {
+    setLoading(true);
     try {
-      await API.put(`/users/${userId}/role`, { role });
-      const data = await fetchAdminData();
-      setAnalytics(data.analytics);
-      setUsers(data.users);
+      const { data } = await API.get("/analytics/admin/overview");
+      setAnalytics(data);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update user role");
+      setError("Failed to load analytics");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const teachers = users.filter(u => u.role === "teacher");
-  const students = users.filter(u => u.role === "student");
+  const fetchUserData = async (role = "") => {
+    setLoading(true);
+    try {
+      const { data } = await API.get("/users");
+      const filtered = role ? data.filter(u => u.role === role) : data;
+      setUsers(filtered);
+    } catch (err) {
+      setError("Failed to load users");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCourseData = async () => {
+    setLoading(true);
+    try {
+      const { data } = await API.get("/courses");
+      setCourses(data);
+    } catch (err) {
+      setError("Failed to load courses");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setError("");
+    if (activeTab === "overview") fetchOverviewData();
+    if (activeTab === "teachers") fetchUserData("teacher");
+    if (activeTab === "students") fetchUserData("student");
+    if (activeTab === "courses") fetchCourseData();
+  }, [activeTab]);
+
+  const maxRoleValue = Math.max(...(analytics?.roleDistribution?.map((item) => item.value) ?? [0]), 1);
+  const maxEnrollmentValue = Math.max(...(analytics?.enrollmentBreakdown?.map((item) => item.value) ?? [0]), 1);
 
   return (
     <SidebarLayout>
@@ -68,34 +74,12 @@ const AdminDashboard = () => {
              <div>
                 <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-black rounded-full uppercase tracking-widest mb-3 inline-block">System Control</span>
                 <h1 className="text-3xl font-black text-primary">Admin Command Center</h1>
-                <p className="text-secondary mt-2">Welcome back, {user?.name}. Governance and analytics overview.</p>
+                <p className="text-secondary mt-2">Managing platform as {user?.name}.</p>
              </div>
              {error && <div className="px-6 py-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/50 rounded-2xl text-red-600 text-sm font-bold">{error}</div>}
+             {loading && <div className="animate-pulse text-blue-600 text-xs font-black uppercase tracking-widest">Loading Platform Data...</div>}
           </div>
         </header>
-
-        {/* Tab Navigation */}
-        <nav className="flex gap-2 p-1.5 bg-gray-100 dark:bg-gray-800/50 rounded-2xl w-fit">
-          {[
-            { id: "overview", label: "Overview", icon: "📊" },
-            { id: "teachers", label: "Teachers", icon: "👨‍🏫" },
-            { id: "students", label: "Students", icon: "🎓" },
-            { id: "courses", label: "Modules/Courses", icon: "📚" }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${
-                activeTab === tab.id 
-                ? "bg-white dark:bg-gray-700 text-blue-600 shadow-sm scale-105" 
-                : "text-gray-500 hover:text-primary"
-              }`}
-            >
-              <span>{tab.icon}</span>
-              {tab.label}
-            </button>
-          ))}
-        </nav>
 
         {activeTab === "overview" && (
           <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -240,7 +224,7 @@ const AdminDashboard = () => {
           <section className="bg-surface rounded-[48px] border border-border shadow-2xl shadow-blue-600/5 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="p-8 lg:p-10 border-b border-border flex justify-between items-center">
               <h3 className="text-2xl font-black text-primary">Faculty Directory</h3>
-              <span className="px-4 py-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 text-xs font-black rounded-xl uppercase tracking-widest">{teachers.length} Active Teachers</span>
+              <span className="px-4 py-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 text-xs font-black rounded-xl uppercase tracking-widest">{users.length} Active Teachers</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -252,7 +236,7 @@ const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                  {teachers.map((t) => (
+                  {users.map((t) => (
                     <tr key={t._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/20 transition-colors">
                       <td className="p-6">
                         <div className="flex items-center gap-4">
@@ -276,7 +260,7 @@ const AdminDashboard = () => {
           <section className="bg-surface rounded-[48px] border border-border shadow-2xl shadow-blue-600/5 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="p-8 lg:p-10 border-b border-border flex justify-between items-center">
               <h3 className="text-2xl font-black text-primary">Student Enrollment</h3>
-              <span className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-black rounded-xl uppercase tracking-widest">{students.length} Total Students</span>
+              <span className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 text-xs font-black rounded-xl uppercase tracking-widest">{users.length} Total Students</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -288,7 +272,7 @@ const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                  {students.map((s) => (
+                  {users.map((s) => (
                     <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/20 transition-colors">
                       <td className="p-6">
                         <div className="flex items-center gap-4">

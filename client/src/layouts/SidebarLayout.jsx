@@ -29,13 +29,23 @@ const SidebarLayout = ({ children }) => {
     setTheme(current => current === "dark" ? "light" : "dark");
   };
 
-  const navItems = [
+  const teacherNavItems = [
     { name: "Dashboard", path: "/teacher/dashboard", icon: "📊" },
     { name: "Courses", path: "/teacher/courses", icon: "📚" },
     { name: "Students", path: "/teacher/students", icon: "👥" },
     { name: "Analytics", path: "/teacher/analytics", icon: "📈" },
     { name: "Profile", path: "/teacher/profile", icon: "👤" },
   ];
+
+  const adminNavItems = [
+    { name: "Overview", path: "/admin?view=overview", icon: "📊" },
+    { name: "Teachers", path: "/admin?view=teachers", icon: "👨‍🏫" },
+    { name: "Students", path: "/admin?view=students", icon: "🎓" },
+    { name: "Modules", path: "/admin?view=courses", icon: "📚" },
+    { name: "Profile", path: "/profile", icon: "👤" },
+  ];
+
+  const navItems = user?.role === "admin" ? adminNavItems : teacherNavItems;
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
