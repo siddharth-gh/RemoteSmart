@@ -400,6 +400,14 @@ const TeacherCourseBuilder = () => {
          });
       }
 
+      if (formToSave.mediaType === 'image' && formToSave.imageUrl) {
+         data.contents.push({
+            type: 'image',
+            url: formToSave.imageUrl,
+            order: 1
+         });
+      }
+
       let res;
       if (editingLectureId) {
         res = await API.put(`/lectures/${editingLectureId}`, data);
