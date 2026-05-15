@@ -43,8 +43,11 @@ const UnifiedPlayer = ({ item }) => {
   let modeLabel = "Original";
 
   if (currentMode === "auto") {
-    effectiveSource = autoQuality === "optimized" && optimizedReady ? item.optimizedUrl : item.url;
+    effectiveSource = autoQuality === "optimized" && optimizedReady ? item.optimizedUrl : (item.originalUrl || item.url);
     modeLabel = `Auto (${autoQuality === "optimized" ? "H.264" : t("lectureViewer.original") || "Original"})`;
+  } else if (currentMode === "original") {
+    effectiveSource = item.originalUrl || item.url;
+    modeLabel = "Original High Quality";
   } else if (currentMode === "optimized" && optimizedReady) {
     effectiveSource = item.optimizedUrl;
     modeLabel = "H.264 Optimized";
@@ -167,9 +170,9 @@ const UnifiedPlayer = ({ item }) => {
                 onChange={(e) => handleModeChange(e.target.value)}
               >
                 <option value="auto">{t("lectureViewer.autoSelect")}</option>
-                <option value="original">High ({formatVideoSize(item.originalSize)})</option>
-                {optimizedReady && <option value="optimized">Compressed ({formatVideoSize(item.optimizedSize)})</option>}
-                {audioReady && <option value="audio">Audio Only ({formatVideoSize(item.audioOnlySize)})</option>}
+                <option value="original">High ({formatVideoSize(item.originalBytes || item.bytes)})</option>
+                {optimizedReady && <option value="optimized">Compressed ({formatVideoSize(item.optimizedBytes)})</option>}
+                {audioReady && <option value="audio">Audio Only ({formatVideoSize(item.audioOnlyBytes)})</option>}
               </select>
             </div>
 

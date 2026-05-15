@@ -334,13 +334,16 @@ export const uploadVideo = asyncHandler(async (req, res) => {
             let optimizedS3Url = "";
             let audioS3Url = "";
             let thumbnailS3Url = "";
+            let originalS3Url = "";
 
             try {
                 // Upload files to S3
-                [optimizedS3Url, audioS3Url, thumbnailS3Url] = await Promise.all([
+                const originalFilenameInS3 = `original-${optimizedVideo.optimizedFilename}`;
+                [optimizedS3Url, audioS3Url, thumbnailS3Url, originalS3Url] = await Promise.all([
                     uploadFileToS3(optimizedVideo.optimizedPath, "videos/optimized", "video/mp4", optimizedVideo.optimizedFilename),
                     uploadFileToS3(optimizedVideo.audioPath, "videos/audio", "audio/mp4", optimizedVideo.audioFilename),
-                    uploadFileToS3(optimizedVideo.thumbnailPath, "videos/thumbnails", "image/jpeg", optimizedVideo.thumbnailFilename)
+                    uploadFileToS3(optimizedVideo.thumbnailPath, "videos/thumbnails", "image/jpeg", optimizedVideo.thumbnailFilename),
+                    uploadFileToS3(savedOriginal.absolutePath, "videos/original", req.file.mimetype, originalFilenameInS3)
                 ]);
 
                 // Cleanup all local files after successful upload
@@ -361,11 +364,13 @@ export const uploadVideo = asyncHandler(async (req, res) => {
                 message: "Video processing finished. Ready to attach.",
                 stage: "complete",
                 result: {
-                    url: optimizedS3Url, // Using optimized as main URL to save storage
+                    url: originalS3Url, 
+                    originalUrl: originalS3Url,
                     optimizedUrl: optimizedS3Url,
                     audioOnlyUrl: audioS3Url,
                     thumbnailUrl: thumbnailS3Url,
                     bytes: req.file.size,
+                    originalBytes: req.file.size,
                     optimizedBytes: optimizedVideo.optimizedBytes,
                     audioOnlyBytes: optimizedVideo.audioBytes,
                     originalFilename: req.file.originalname,
@@ -386,10 +391,15 @@ export const uploadVideo = asyncHandler(async (req, res) => {
                     if (lecture) {
                         const videoIndex = lecture.contents.findIndex(c => c.type === 'video');
                         if (videoIndex !== -1) {
+                            lecture.contents[videoIndex].url = originalS3Url;
+                            lecture.contents[videoIndex].originalUrl = originalS3Url;
                             lecture.contents[videoIndex].optimizedUrl = optimizedS3Url;
                             lecture.contents[videoIndex].audioOnlyUrl = audioS3Url;
                             lecture.contents[videoIndex].thumbnailUrl = thumbnailS3Url;
-                            lecture.contents[videoIndex].duration = 0; // Or optimizedVideo.duration if available
+                            lecture.contents[videoIndex].originalBytes = req.file.size;
+                            lecture.contents[videoIndex].optimizedBytes = optimizedVideo.optimizedBytes;
+                            lecture.contents[videoIndex].audioOnlyBytes = optimizedVideo.audioBytes;
+                            lecture.contents[videoIndex].duration = 0;
                             lecture.contents[videoIndex].isOptimized = true;
                         }
                         lecture.transcript = transcript;

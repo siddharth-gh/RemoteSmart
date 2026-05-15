@@ -75,7 +75,7 @@ export const downloadCoursePack = async (courseId) => {
 
   const assetUrls = [];
 
-  Object.values(lecturesByModule).forEach((lectures) => {
+  Object.values(lecturesByModule).forEach((lectures) => { // image and pdf are cached
     lectures.forEach((lecture) => {
       lecture.contents?.forEach((content) => {
         if (content.type === "image" && content.url) {

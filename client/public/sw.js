@@ -31,7 +31,7 @@ self.addEventListener("activate", (event) => {
       Promise.all(
         cacheNames.map((cacheName) => {
           if (!validCaches.includes(cacheName)) {
-            return caches.delete(cacheName);
+            return caches.delete(cacheName); // delete old
           }
 
           return Promise.resolve();
