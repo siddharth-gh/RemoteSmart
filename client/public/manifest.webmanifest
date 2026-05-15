@@ -5,8 +5,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f5fbf7",
-  "theme_color": "#2f7d61",
+  "background_color": "#001f3f",
+  "theme_color": "#003366",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -34,7 +34,7 @@
       "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "EduReach Dashboard"
+      "label": "RemoteSmart Dashboard"
     }
   ]
 }
