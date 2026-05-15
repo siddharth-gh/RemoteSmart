@@ -34,10 +34,10 @@ const Dashboard = () => {
           API.get("/notes/me"),
         ]);
         setOverview(ovRes.data);
-        setRecommendations(recRes.data);
-        setAttempts(attRes.data);
-        setAchievements(achRes.data);
-        setNotes(noteRes.data);
+        setRecommendations(Array.isArray(recRes.data) ? recRes.data : []);
+        setAttempts(Array.isArray(attRes.data) ? attRes.data : []);
+        setAchievements(Array.isArray(achRes.data) ? achRes.data : []);
+        setNotes(Array.isArray(noteRes.data) ? noteRes.data : []);
       } catch (err) {
         setError(err.response?.data?.message || t("dashboard.loadError"));
       } finally {
