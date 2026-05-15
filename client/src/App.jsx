@@ -90,7 +90,7 @@ function App() {
 
           {/* Admin routes */}
           <Route element={<RoleRoute allowedRoles={["admin"]} />}>
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin" element={<AdminDashboard />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
