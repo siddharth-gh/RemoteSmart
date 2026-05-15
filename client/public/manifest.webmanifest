@@ -30,9 +30,9 @@
   ],
   "screenshots": [
     {
-      "src": "/screenshot-1.png",
+      "src": "/screenshot-1.jpg",
       "sizes": "1080x1920",
-      "type": "image/png",
+      "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "RemoteSmart Dashboard"
     }
